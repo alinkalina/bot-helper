@@ -1,3 +1,4 @@
+import logging
 import requests
 
 
@@ -7,7 +8,7 @@ class GPT:
         self.headers = {'Content-Type': 'application/json'}
         self.json = {
                 'messages': [
-                    {'role': 'system', 'content': 'По-русски кратко ответь на вопрос: '},
+                    {'role': 'system', 'content': 'По шагам кратко реши задачу по математике на русском языке: '},
                 ],
                 'temperature': 1.2,
                 'max_tokens': 2000
@@ -30,8 +31,11 @@ class GPT:
                     del self.json['messages'][1]
                 except IndexError:
                     pass
+                logging.info(f"Ответ: {resp.json()['choices'][0]['message']['content']}")
                 return resp.json()['choices'][0]['message']['content']
             else:
+                logging.error('Ошибка НЕ 200')
                 return 'error'
         except requests.exceptions.ConnectionError:
+            logging.critical('Нет соединения с нейросетью')
             return 'error'
