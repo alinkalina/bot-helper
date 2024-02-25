@@ -13,7 +13,7 @@
 
 ## Инструкция по запуску проекта
 - Клонируйте репозиторий
-- Добавьте необходимые библиотеки Python, зависимости прописаны в файле [requirements.py](https://github.com/alinkalina/bot-helper/blob/main/requirements.txt)
+- Добавьте необходимые библиотеки Python, зависимости прописаны в файле [requirements.txt](https://github.com/alinkalina/bot-helper/blob/main/requirements.txt)
 - Создайте файл config.py и поместите в него переменную token со строковым значением, это токен Телеграм бота
 - _~~Спойлер: есть команда для просмотра логов, не прописанная в меню бота, только для разработчиков~~_
 
