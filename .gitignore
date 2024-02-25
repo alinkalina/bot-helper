@@ -161,4 +161,4 @@ cython_debug/
 
 config.py
 
-*.txt
+logs.txt
