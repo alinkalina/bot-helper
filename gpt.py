@@ -31,11 +31,12 @@ class GPT:
                     del self.json['messages'][1]
                 except IndexError:
                     pass
-                logging.info(f"Ответ: {resp.json()['choices'][0]['message']['content']}")
+                logging.info(f"Ответ:\n{resp.json()['choices'][0]['message']['content']}")
                 return resp.json()['choices'][0]['message']['content']
             else:
                 logging.error('Ошибка НЕ 200')
-                return 'error'
+                return 'Похоже, с нейросетью какие-то проблемы. Но не волнуйтесь, скоро из устранят, и Вы сможете ' \
+                       'снова задать свой вопрос'
         except requests.exceptions.ConnectionError:
             logging.critical('Нет соединения с нейросетью')
-            return 'error'
+            return 'Похоже, у бота пропало соединения с нейросетью. Повторите попытку через некоторое время'
