@@ -1,20 +1,17 @@
 import telebot
 from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from gpt import ask_gpt
 import logging
-from gpt import GPT
+from database import add_user, reset_assistant, set_param, get_params, update_assistant
 from config import token
 
 
 bot = telebot.TeleBot(token)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     filename='logs.txt', filemode='w')
-users = {}
 
-
-def add_user(chat_id):
-    if chat_id not in users.keys():
-        logging.info(f'Добавлен пользователь {chat_id}')
-        users[chat_id] = GPT()
+subjects = ['Математика', 'Физика', 'Химия', 'Информатика', 'Русский язык']
+levels = ['Новичок', 'Профи']
 
 
 @bot.message_handler(commands=['start'])
@@ -46,16 +43,18 @@ def get_prompt(prompt):
                                                    'покороче :)', reply_markup=ReplyKeyboardRemove())
             bot.register_next_step_handler(msg, get_prompt)
         else:
+            set_param('question', prompt.text, prompt.chat.id)
             logging.info(f'От пользователя {prompt.chat.id} получен вопрос: {prompt.text}')
             msg = bot.send_message(prompt.chat.id, 'Подождите секундочку...', reply_markup=ReplyKeyboardRemove())
             markup = ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton('Продолжи'))
-            answer = users[prompt.chat.id].ask_gpt(prompt.text)
+            answer = ask_gpt(prompt.text, *get_params(prompt.chat.id))
+            update_assistant(answer, prompt.chat.id)
             bot.delete_message(prompt.chat.id, msg.id)
             try:
                 bot.send_message(prompt.chat.id, answer, reply_markup=markup)
-            except telebot.apihelper.ApiTelegramException:
+            except:
                 bot.send_message(prompt.chat.id, 'Объяснение закончено')
-                logging.warning('От нейросети пришёл пустой ответ')
+                logging.warning('От нейросети пришёл пустой ответ или ответ с кавычками')
     else:
         logging.warning(f'Пользователь {prompt.chat.id} прервал вопрос командой {prompt.text}')
 
@@ -64,9 +63,11 @@ def get_prompt(prompt):
 def ask_message(message):
     add_user(message.chat.id)
     logging.info(f'Пользователь {message.chat.id} начал задавать вопрос')
-    users[message.chat.id].assistant = ''
-    msg = bot.send_message(message.chat.id, 'Введите вопрос', reply_markup=ReplyKeyboardRemove())
-    bot.register_next_step_handler(msg, get_prompt)
+    reset_assistant(message.chat.id)
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    for subject in subjects:
+        markup.add(KeyboardButton(subject))
+    bot.send_message(message.chat.id, 'Выберите предмет, по которому хотите задать вопрос', reply_markup=markup)
 
 
 @bot.message_handler(commands=['debug'])
@@ -80,6 +81,17 @@ def debugging(message):
 def text_message(message):
     if message.text == 'Продолжи':
         get_prompt(message)
+    elif message.text in subjects:
+        set_param('subject', message.text, message.chat.id)
+        markup = ReplyKeyboardMarkup(resize_keyboard=True)
+        for level in levels:
+            markup.add(KeyboardButton(level))
+        bot.send_message(message.chat.id, 'Выберите уровень объяснения (от этого зависит насколько заумные слова '
+                                          'будут в ответе)', reply_markup=markup)
+    elif message.text in levels:
+        set_param('level', message.text, message.chat.id)
+        msg = bot.send_message(message.chat.id, 'Введите вопрос', reply_markup=ReplyKeyboardRemove())
+        bot.register_next_step_handler(msg, get_prompt)
     else:
         bot.send_message(message.chat.id, 'Вам следует воспользоваться командой или кнопкой, другого бот не понимает :('
                          , reply_markup=ReplyKeyboardRemove())
@@ -93,6 +105,6 @@ def error_message(message):
 
 try:
     logging.info('Бот запущен')
-    bot.infinity_polling()
+    bot.polling()
 except Exception as e:
-    logging.critical(f'Произошла ошибка: {e}')
+    logging.critical(f'Произошла ошибка: {type(e).__name__} - {str(e)}')

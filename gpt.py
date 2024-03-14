@@ -2,41 +2,42 @@ import logging
 import requests
 
 
-class GPT:
-    def __init__(self):
-        self.url = 'http://localhost:1234/v1/chat/completions'
-        self.headers = {'Content-Type': 'application/json'}
-        self.json = {
-                'messages': [
-                    {'role': 'system', 'content': 'По шагам кратко реши задачу по математике на русском языке: '},
-                ],
-                'temperature': 1.2,
-                'max_tokens': 2000
-            }
-        self.assistant = ''
+url = 'http://localhost:1234/v1/chat/completions'
+headers = {'Content-Type': 'application/json'}
+json = {
+        'messages': [],
+        'temperature': 1.2,
+        'max_tokens': 2000
+    }
 
-    def create_json(self, question):
-        self.json['messages'].append({'role': 'user', 'content': question})
-        if self.assistant:
-            self.json['messages'].append({'role': 'assistant', 'content': self.assistant})
 
-    def ask_gpt(self, question):
-        self.create_json(question)
-        try:
-            resp = requests.post(self.url, headers=self.headers, json=self.json)
-            if resp.status_code == 200 and 'choices' in resp.json():
-                self.assistant = self.assistant + resp.json()['choices'][0]['message']['content']
-                del self.json['messages'][1]
-                try:
-                    del self.json['messages'][1]
-                except IndexError:
-                    pass
-                logging.info(f"Ответ:\n{resp.json()['choices'][0]['message']['content']}")
-                return resp.json()['choices'][0]['message']['content']
-            else:
-                logging.error('Ошибка НЕ 200')
-                return 'Похоже, с нейросетью какие-то проблемы. Но не волнуйтесь, скоро из устранят, и Вы сможете ' \
-                       'снова задать свой вопрос'
-        except requests.exceptions.ConnectionError:
-            logging.critical('Нет соединения с нейросетью')
-            return 'Похоже, у бота пропало соединения с нейросетью. Повторите попытку через некоторое время'
+def create_json(question, subject, level, assistant):
+    if assistant:
+        json['messages'].append({'role': 'assistant', 'content': assistant})
+    else:
+        json['messages'] = []
+        json['messages'].append({'role': 'user', 'content': question})
+        json['messages'].append({'role': 'system', 'content': f'Очень кратко ответь на русском языке на вопрос по '
+                                                              f'предмету {subject} как будто ты объясняешь человеку, '
+                                                              f'который в этом {level}:'})
+
+
+def ask_gpt(question, params):
+    subject, level, assistant = params
+    create_json(question, subject, level, assistant)
+    try:
+        resp = requests.post(url, headers=headers, json=json)
+        if resp.status_code == 200 and 'choices' in resp.json():
+            try:
+                del json['messages'][2]
+            except IndexError:
+                pass
+            logging.info(f"Ответ:\n{resp.json()['choices'][0]['message']['content']}")
+            return resp.json()['choices'][0]['message']['content']
+        else:
+            logging.error('Ошибка НЕ 200')
+            return 'Похоже, с нейросетью какие-то проблемы. Но не волнуйтесь, скоро их устранят, и Вы сможете снова ' \
+                   'задать свой вопрос'
+    except requests.exceptions.ConnectionError:
+        logging.critical('Нет соединения с нейросетью')
+        return 'Похоже, у бота пропало соединения с нейросетью. Повторите попытку через некоторое время'

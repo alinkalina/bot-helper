@@ -160,5 +160,7 @@ cython_debug/
 .idea/
 
 config.py
-
 logs.txt
+*.zip
+*.sqlite
+*.sqlite-journal
