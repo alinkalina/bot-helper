@@ -1,5 +1,5 @@
-import logging
 import requests
+import logging
 
 
 url = 'http://localhost:1234/v1/chat/completions'
@@ -36,8 +36,8 @@ def ask_gpt(question, params):
             return resp.json()['choices'][0]['message']['content']
         else:
             logging.error('Ошибка НЕ 200')
-            return 'Похоже, с нейросетью какие-то проблемы. Но не волнуйтесь, скоро их устранят, и Вы сможете снова ' \
-                   'задать свой вопрос'
+            return ('Похоже, с нейросетью какие-то проблемы. Но не волнуйтесь, скоро их устранят, и Вы сможете снова '
+                    'задать свой вопрос')
     except requests.exceptions.ConnectionError:
         logging.critical('Нет соединения с нейросетью')
         return 'Похоже, у бота пропало соединения с нейросетью. Повторите попытку через некоторое время'

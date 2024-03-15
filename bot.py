@@ -1,9 +1,10 @@
 import telebot
 from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from gpt import ask_gpt
 import logging
-from database import add_user, reset_assistant, set_param, get_params, update_assistant
+
 from config import token
+from gpt import ask_gpt
+from database import add_user, reset_assistant, set_param, get_params, update_assistant, close_db
 
 
 bot = telebot.TeleBot(token)
@@ -17,7 +18,7 @@ levels = ['Новичок', 'Профи']
 @bot.message_handler(commands=['start'])
 def start_message(message):
     add_user(message.chat.id)
-    bot.send_message(message.chat.id, 'Здравствуйте! Это Математик - Ваш помощник в решении различных математических '
+    bot.send_message(message.chat.id, 'Здравствуйте! Теперь это НЕ ТОЛЬКО Математик - Ваш помощник в решении различных '
                                       'задач. Задавайте вопросы с помощью команды /ask, и бот пришлёт Вам ответ, '
                                       'сгенерированный с помощью нейросети. Правда, он англичанин, но учит русский '
                                       'язык, поэтому он будет стараться отвечать на Вашем языке, но ничего не обещает '
@@ -65,8 +66,12 @@ def ask_message(message):
     logging.info(f'Пользователь {message.chat.id} начал задавать вопрос')
     reset_assistant(message.chat.id)
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    for subject in subjects:
-        markup.add(KeyboardButton(subject))
+    for i in range(len(subjects)):
+        if i % 2 == 0:
+            try:
+                markup.row(KeyboardButton(subjects[i]), KeyboardButton(subjects[i + 1]))
+            except IndexError:
+                markup.row(KeyboardButton(subjects[i]))
     bot.send_message(message.chat.id, 'Выберите предмет, по которому хотите задать вопрос', reply_markup=markup)
 
 
@@ -84,9 +89,13 @@ def text_message(message):
     elif message.text in subjects:
         set_param('subject', message.text, message.chat.id)
         markup = ReplyKeyboardMarkup(resize_keyboard=True)
-        for level in levels:
-            markup.add(KeyboardButton(level))
-        bot.send_message(message.chat.id, 'Выберите уровень объяснения (от этого зависит насколько заумные слова '
+        for j in range(len(levels)):
+            if j % 2 == 0:
+                try:
+                    markup.row(KeyboardButton(levels[j]), KeyboardButton(levels[j + 1]))
+                except IndexError:
+                    markup.row(KeyboardButton(levels[j]))
+        bot.send_message(message.chat.id, 'Выберите уровень объяснения (от этого зависит насколько "заумные" слова '
                                           'будут в ответе)', reply_markup=markup)
     elif message.text in levels:
         set_param('level', message.text, message.chat.id)
@@ -106,5 +115,6 @@ def error_message(message):
 try:
     logging.info('Бот запущен')
     bot.polling()
+    close_db()
 except Exception as e:
     logging.critical(f'Произошла ошибка: {type(e).__name__} - {str(e)}')
